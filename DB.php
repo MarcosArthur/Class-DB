@@ -18,6 +18,7 @@ class DB
     private $login = "root";
     private $password = "root";
     private $where = array();
+    private $lastId;
 
     public function __construct()
     {
@@ -72,6 +73,11 @@ class DB
         $this->result = $query;
     }
 
+    public function getResult()
+    {
+        return $this->result;
+    }
+
     public function result_array()
     {
         return $this->result->fetchAll();
@@ -104,14 +110,42 @@ class DB
         }
 
         if ($bind->execute()) {
-            return true;
+            $this->setResult($bind);
+            $this->setLastId($this->getConection()->lastInsertId());
         }
+
 
         return false;
 
 
     }
 
+    public function setLastId($id)
+    {
+        $this->lastId = $id;
+    }
+
+    public function getLastId()
+    {
+        return $this->lastId;
+    }
+
+    public function num_rows()
+    {
+        return $this->getResult()->rowCount();
+    }
+
 
 }
 
+$db = new DB();
+
+$db->insert('conta', array(
+    'CONSUMO' => '10',
+    'NOME' => 'test',
+    'TOTALPAGAR' => '100',
+    'TARIFA' => '10',
+    'MULTA' => '22'
+));
+
+echo $db->getLastId();
