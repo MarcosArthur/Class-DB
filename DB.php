@@ -11,13 +11,12 @@ class DB
     private $db;
     private $result;
     private $dsn = array(
-        'dbname' => 'contas',
+        'dbname' => '', // NAME DATABASE
         'host' => 'localhost', // DEFAULT
         'dbdriver' => 'mysql'
     );
     private $login = "root";
     private $password = "root";
-    private $where = array();
     private $lastId;
 
     public function __construct()
@@ -52,19 +51,70 @@ class DB
 
     public function get_where($table, $conditions = array())
     {
-        $query = "SELECT * FROM $table";
+        $query = "SELECT * FROM $table WHERE ";
+        $prepare = array();
+        $where = array();
 
-        if (!empty($conditions) && count($conditions) && is_array($conditions)) {
-
+        if (is_array($conditions)) {
             foreach ($conditions as $key => $value) {
-                $this->where[] = $key . "=" . $value;
+                $where[] = $key . "=" . ":" . $key;
+                $prepare[$key] = $value;
             }
 
-//            $query += $where;
-            var_dump($this->where);
+            $query = $query . implode(' AND ', $where);
 
+            echo $query;
+            $result = $this->getConection()->prepare($query);
+
+            foreach ($prepare as $item => $value) {
+                $result->bindValue(":{$item}", $value);
+            }
+
+            if ($result->execute()) {
+                $this->setResult($result);
+            }
         }
 
+
+        return $this;
+
+    }
+
+    public function update($table, $values = array(), $conditions = array())
+    {
+        $query = "UPDATE $table SET ";
+        $prepare = array();
+        $bind = array();
+        $where = array();
+        $prepareWhere = array();
+
+        foreach ($values as $key => $val) {
+            $prepare[] = $key . "=" . ":" . $key;
+            $bind[$key] = $val;
+        }
+        $query = $query . implode(', ', $prepare);
+
+        foreach ($conditions as $key => $val) {
+            $prepareWhere[] = $key . "=" . ":" . $key;
+            $where[$key] = $val;
+        }
+
+        $query = $query . " WHERE " . implode("WHERE", $prepareWhere);
+
+        $query = $this->getConection()->prepare($query);
+
+        $prepare = array_merge($prepare, $prepareWhere);
+
+        $bind = array_merge($bind, $where);
+
+        foreach ($prepare as $keyPrepare => $val) {
+            echo ":{$keyPrepare}". $val;
+           $query->bindValue(":{$keyPrepare}", $val);
+        }
+
+        foreach ($bind as $keyBind => $val) {
+            $query->bindValue(":{$keyBind}", $val);
+        }
 
     }
 
@@ -92,14 +142,12 @@ class DB
     {
         $query = array();
         $prepare = array();
-
         $insert = "INSERT INTO $table SET ";
 
         foreach ($values as $key => $val) {
             $prepare[] = "{$key} = :{$key}";
             $query[$key] = $val;
         }
-
 
         $insert = $insert . implode(', ', $prepare);
 
@@ -112,12 +160,10 @@ class DB
         if ($bind->execute()) {
             $this->setResult($bind);
             $this->setLastId($this->getConection()->lastInsertId());
+            return true;
         }
 
-
         return false;
-
-
     }
 
     public function setLastId($id)
@@ -140,12 +186,4 @@ class DB
 
 $db = new DB();
 
-$db->insert('conta', array(
-    'CONSUMO' => '10',
-    'NOME' => 'test',
-    'TOTALPAGAR' => '100',
-    'TARIFA' => '10',
-    'MULTA' => '22'
-));
-
-echo $db->getLastId();
+$db->update("conta", array('CONSUMO' => "20", 'CONSUMO' => "20", 'teste' => "20", 'nome' => "20"), array("ID" => "846"));
